@@ -4,6 +4,7 @@ const path = require("path");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const studentRoutes = require("./routes/studentRoutes");
+const Student = require("./models/user");
 
 const app = express();
 
@@ -14,6 +15,40 @@ app.use(express.static("public"));
 
 // Connect to MongoDB
 connectDB();
+
+// API Route - Get all students
+app.get("/api/students", async (req, res) => {
+  try {
+    const { search, department } = req.query;
+    
+    let filter = {};
+    
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phoneNumber: { $regex: search, $options: 'i' } },
+      ];
+    }
+    
+    if (department) {
+      filter.department = { $regex: department, $options: 'i' };
+    }
+    
+    const students = await Student.find(filter).sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      count: students.length,
+      data: students,
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
 
 // Routes
 app.use('/api/students', studentRoutes);
